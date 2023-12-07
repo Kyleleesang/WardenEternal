@@ -34,11 +34,11 @@ contract Vault is AccessControl, Pausable {
         _unpause();
     }
 
-    function addAdmin(address _admin) external onlyAdmin(){
+    function addAdmin(address _admin) external onlyAdmin{
         grantRole(ADMIN_ROLE, _admin);
     }
 
-    function deposit(uint _amount, address _token) external whenNotPaused(){
+    function deposit(uint _amount, address _token) external whenNotPaused onlyWhitelisted(_token){
         //require(!paused(), "contract is paused");
         require(isWhitelisted[_token], "token not whitelisted");
         IERC20(_token).transferFrom(msg.sender, address(this), _amount);

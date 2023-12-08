@@ -1,97 +1,66 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 //import openzeppelin contracts
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
-contract Vault {
-    IERC20 public immutable token;
 
-    //make a mapping of whitelisted tokens
+
+contract Vault is AccessControl, Pausable {
+    address public _owner;
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+
+    constructor() {
+        _owner = msg.sender;
+        grantRole(ADMIN_ROLE, msg.sender);
+    }
+
     mapping(address => bool) public isWhitelisted;
+    mapping(address => mapping(address => uint)) public tokenBalances;
 
-    uint public totalSupply;
-    mapping(address => uint) public balanceOf;
-
-    constructor(address _token) {
-        token = IERC20(_token);
+    function whiteListToken(address _token) external onlyAdmin {
+        isWhitelisted[_token] = true;
     }
 
-    function _mint(address _to, uint _shares) private {
-        totalSupply += _shares;
-        balanceOf[_to] += _shares;
+    function unWhiteListToken(address _token) external onlyAdmin {
+        isWhitelisted[_token] = false;
     }
 
-    function _burn(address _from, uint _shares) private {
-        totalSupply -= _shares;
-        balanceOf[_from] -= _shares;
+    function pause() public onlyAdmin {
+       _pause();
     }
 
-    function whiteListToken(address _token) external {
-        require(msg.sender == owner(), "only owner can whitelist token");
-        IERC20(_token).approve(address(this), type(uint).max);
-    }
-
-    function pause() public {
-        require(msg.sender == owner(), "only owner can pause");
-        _pause();
-    }
-
-    function unpause() public {
-        require(msg.sender == owner(), "only owner can unpause");
+    function unpause() public onlyAdmin {
         _unpause();
     }
 
-    function addAdmin(address _admin) external {
-        require(msg.sender == owner(), "only owner can add admin");
-        grantRole(DEFAULT_ADMIN_ROLE, _admin);
+    function addAdmin(address _admin) external onlyAdmin(){
+        grantRole(ADMIN_ROLE, _admin);
+    }
+
+    function deposit(uint _amount, address _token) external whenNotPaused(){
+        //require(!paused(), "contract is paused");
+        require(isWhitelisted[_token], "token not whitelisted");
+        IERC20(_token).transferFrom(msg.sender, address(this), _amount);
+        tokenBalances[_token][msg.sender] += _amount;
+    }
+
+    function withdraw(uint _amount, address _token) external whenNotPaused {
+        //require(!paused(), "contract is paused");
+        require(tokenBalances[_token][msg.sender] >= _amount, "not enough balance");
+        tokenBalances[_token][msg.sender] -= _amount;
+        IERC20(_token).transfer(msg.sender, _amount);
+
     }
 
     modifier onlyAdmin() {
-        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "only admin can call");
+        require(address(msg.sender) == _owner || hasRole(ADMIN_ROLE, msg.sender), "Caller is not the owner or Admin");
         _;
     }
-    function deposit(uint _amount) external {
-        //require not paused
-        require(!paused(), "contract is paused");
-        //require token is whitelisted
-        require(token.allowance(msg.sender, address(this)) >= _amount, "token not whitelisted");
 
-        /*
-        a = amount
-        B = balance of token before deposit
-        T = total supply
-        s = shares to mint
-
-        (T + s) / T = (a + B) / B 
-
-        s = aT / B
-        */
-        uint shares;
-        if (totalSupply == 0) {
-            shares = _amount;
-        } else {
-            shares = (_amount * totalSupply) / token.balanceOf(address(this));
-        }
-
-        _mint(msg.sender, shares);
-        token.transferFrom(msg.sender, address(this), _amount);
-    }
-
-    function withdraw(uint _shares) external {
-        /*
-        a = amount
-        B = balance of token before withdraw
-        T = total supply
-        s = shares to burn
-
-        (T - s) / T = (B - a) / B 
-
-        a = sB / T
-        */
-        uint amount = (_shares * token.balanceOf(address(this))) / totalSupply;
-        _burn(msg.sender, _shares);
-        token.transfer(msg.sender, amount);
+    modifier onlyWhitelisted(address _token) {
+        require(isWhitelisted[_token], "token not whitelisted");
+        _;
     }
 }

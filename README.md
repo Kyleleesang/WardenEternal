@@ -1,13 +1,10 @@
-# Sample Hardhat Project
+# Sample Hardhat Solidity Vault Project
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
-
-Try running some of the following tasks:
+This project demonstrates a basic Hardhat use case. the network is currently set for the sepolia testnet so make sure you have testnet eth to call certain functions.It comes with a sample vault contract for this you need:
+npm install
+npx hardhat test and Enjoy
 
 ```shell
-npx hardhat help
+npm install
 npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat run scripts/deploy.js
 ```

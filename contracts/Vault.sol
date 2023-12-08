@@ -13,7 +13,6 @@ contract Vault is AccessControl, Pausable {
 
     constructor() {
         _owner = msg.sender;
-        grantRole(ADMIN_ROLE, msg.sender);
     }
 
     mapping(address => bool) public isWhitelisted;

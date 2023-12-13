@@ -4,6 +4,8 @@ This project demonstrates a basic Hardhat use case. the network is currently set
 npm install
 npx hardhat test and Enjoy
 
+send any questions about running it to @kyleleesang117@gmail.com
+
 ```shell
 npm install
 npx hardhat test
